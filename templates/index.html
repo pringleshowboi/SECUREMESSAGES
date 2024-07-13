@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Secure Messaging App</title>
+</head>
+<body>
+    <h1>Welcome to Secure Messaging App</h1>
+    <div id="messages">
+        {% if last_message %}
+        <p>{{ last_message }}</p>
+        {% endif %}
+    </div>
+    <input type="text" id="messageInput" placeholder="Type a message...">
+    <button onclick="sendMessage()">Send</button>
+
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.min.js"></script>
+    <script>
+        const socket = io();
+
+        function decryptMessage(encryptedMessage) {
+            const key = CryptoJS.enc.Utf8.parse('your_32_byte_key_here');
+            const iv = CryptoJS.enc.Base64.parse(encryptedMessage.slice(0, 24));
+            const encrypted = CryptoJS.enc.Base64.parse(encryptedMessage.slice(24));
+            const decrypted = CryptoJS.AES.decrypt({ciphertext: encrypted}, key, {iv: iv, mode: CryptoJS.mode.CBC});
+            return CryptoJS.enc.Utf8.stringify(decrypted);
+        }
+
+        socket.on('message', function(encryptedMessage) {
+            const messagesDiv = document.getElementById('messages');
+            const decryptedMessage = decryptMessage(encryptedMessage);
+            const messageElement = document.createElement('p');
+            messageElement.textContent = decryptedMessage;
+            messagesDiv.appendChild(messageElement);
+        });
+
+        function sendMessage() {
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value;
+            socket.emit('message', message);
+            messageInput.value = '';
+        }
+    </script>
+</body>
+</html>
